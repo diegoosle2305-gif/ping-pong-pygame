@@ -5,24 +5,25 @@ import sys
 pygame.init()  
   
 # Set up the display  
-screen_width, screen_height = 640, 480  
-screen = pygame.display.set_mode((screen_width, screen_height))  
+SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480  
+SCREEN = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))  
   
 # Define colors  
-white = (255, 255, 255) 
-green = (0, 255, 0)
-red = (255, 0, 0) 
-background_color = (0, 0, 0)  
+WHITE = (255, 255, 255) 
+GREEN = (0, 255, 0)
+RED = (255, 0, 0) 
+BACKGROUND_COLOR = (0, 0, 0)  
   
-# Set initial position and velocity of the pixel  
-x, y = screen_width // 2, screen_height // 2  
-speed_x, speed_y = 2, 2  
+# Set initial position and velocity of the ball
+STARTING_X, STARTING_Y = SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2  
+STARTING_SPEED_X, STARTING_SPEED_Y = 2, 2  
   
-# Define the size of the pixel  
-pixel_size = 8  
+# Define the size of the ball
+pixel_ball_size = 12  
   
 # Set up the clock for frame rate control  
 clock = pygame.time.Clock()  
+
 class Object:
 
     def __init__(self, x, y, width, height, color):  
@@ -54,32 +55,49 @@ class Player(Object):
         self.rect.x = x  
         self.rect.y = y
 
-player = Player(300, 400, 50, 10, green)  # Create a player instance
-
 class Ball(Object):
     def __init__(self, x, y, speed_x, speed_y, width, height, color):  
         super().__init__(x, y, width, height, color)  
         self.speed_x = speed_x  
         self.speed_y = speed_y
     
-    def move(self,player):
+    def move(self,player,enemie):
         if self.is_colliding_with(player):
             if self.speed_y > 0:
                 self.speed_y *= -1
-        if self.is_touching_horizontal_walls(screen_width, screen_height):
+                self.speed_y *= 1.05
+                self.speed_x *= 1.05
+        if self.is_colliding_with(enemie):
+            if self.speed_y < 0:
+                self.speed_y *= -1
+                self.speed_y *= 1.05
+                self.speed_x *= 1.05
+        if self.is_touching_horizontal_walls(SCREEN_WIDTH, SCREEN_HEIGHT):
             self.speed_x *= -1
-        if self.is_touching_vertical_walls(screen_width, screen_height):
+        if self.is_touching_vertical_walls(SCREEN_WIDTH, SCREEN_HEIGHT):
             self.speed_y *= -1
         super().move(self.speed_x, self.speed_y)
 
-ball = Ball(x, y,speed_x, speed_y, pixel_size, pixel_size, red)  # Create a ball instance
+class Enemie(Object):
 
-def check_collision_with_cursor(x, y, cursor_pos):  
-    """Check if the pixel is within the cursor's area."""  
-    cursor_x, cursor_y = cursor_pos  
-    if cursor_x - pixel_size <= x <= cursor_x and cursor_y - pixel_size <= y <= cursor_y:  
-        return True  
-    return False
+    def __init__(self, x, y, width, height, color,speed_x,ball):  
+        super().__init__(x, y, width, height, color)  
+        self.speed_x = speed_x
+        self.ball = ball
+    
+    def move(self):
+        velocity_enemie = self.speed_x / ((self.ball.rect.y + 50) / self.rect.y)
+        if self.rect.x + self.rect.width / 2 < self.ball.rect.x:
+            super().move(velocity_enemie, 0)
+        else:
+            super().move(-velocity_enemie, 0)
+
+player = Player(300, SCREEN_HEIGHT - 50, 50, 10, GREEN)  # Create a player instanceç
+
+ball = Ball(STARTING_X, STARTING_Y,STARTING_SPEED_X, STARTING_SPEED_Y, pixel_ball_size, pixel_ball_size, RED)  # Create a ball instance
+
+enemie = Enemie(300, 50, 50, 10, WHITE, 10, ball)  # Create an enemy instance
+
 
 def main_game_loop():
     cursor_pos = pygame.mouse.get_pos() 
@@ -89,24 +107,25 @@ def main_game_loop():
         if event.type == pygame.QUIT:  
             pygame.quit()  
             sys.exit()  
- 
-    if check_collision_with_cursor(ball.rect.x, ball.rect.y, cursor_pos):  
-        ball.speed_x *= -1  
-        ball.speed_y *= -1
-        player.teleport(cursor_pos[0], cursor_pos[1])  # Teleport the player to the cursor position
 
-    # Update pixel position  
-    ball.move(player)  # Move the ball and check for collisions with the player and walls
-    player.teleport(cursor_pos[0], 400)  # Player doesn't move on its own, but we can keep this for future movement logic
+
+    if ball.is_touching_vertical_walls(SCREEN_WIDTH, SCREEN_HEIGHT):
+        print("Game Over")
+
+
+    player.teleport(cursor_pos[0] - player.rect.width / 2, 400)  # Player movement
+    enemie.move()  # Move the enemy based on the ball's position
+    ball.move(player, enemie)  # Move the ball and check for collisions with the player and enemy
 
     #Draw everything
 
     # Fill the background  
-    screen.fill(background_color)  
+    SCREEN.fill(BACKGROUND_COLOR)  
   
     
-    ball.draw(screen)  # Draw the ball on the screen
-    player.draw(screen)  # Draw the player on the screen   
+    ball.draw(SCREEN)  # Draw the ball on the screen
+    player.draw(SCREEN)  # Draw the player on the screen   
+    enemie.draw(SCREEN)  # Draw the enemy on the screen
   
     # Update the display  
     pygame.display.flip()  
