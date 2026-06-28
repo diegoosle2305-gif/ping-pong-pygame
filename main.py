@@ -23,8 +23,8 @@ pixel_size = 8
   
 # Set up the clock for frame rate control  
 clock = pygame.time.Clock()  
+class Object:
 
-class Player:
     def __init__(self, x, y, width, height, color):  
         self.rect = pygame.Rect(x, y, width, height)  
         self.color = color  
@@ -35,8 +35,44 @@ class Player:
     def move(self, dx, dy):  
         self.rect.x += dx  
         self.rect.y += dy
+    
+    def is_colliding_with(self, other):  
+        return self.rect.colliderect(other.rect)
+    
+    def is_touching_horizontal_walls(self, screen_width, screen_height):  
+        if self.rect.x <= 0 or self.rect.x + self.rect.width >= screen_width:  
+            return True  
+        return False
+    
+    def is_touching_vertical_walls(self, screen_width, screen_height):  
+        if self.rect.y <= 0 or self.rect.y + self.rect.height >= screen_height:  
+            return True  
+        return False
+
+class Player(Object):
+    def teleport(self, x, y):  
+        self.rect.x = x  
+        self.rect.y = y
 
 player = Player(300, 400, 50, 10, green)  # Create a player instance
+
+class Ball(Object):
+    def __init__(self, x, y, speed_x, speed_y, width, height, color):  
+        super().__init__(x, y, width, height, color)  
+        self.speed_x = speed_x  
+        self.speed_y = speed_y
+    
+    def move(self,player):
+        if self.is_colliding_with(player):
+            if self.speed_y > 0:
+                self.speed_y *= -1
+        if self.is_touching_horizontal_walls(screen_width, screen_height):
+            self.speed_x *= -1
+        if self.is_touching_vertical_walls(screen_width, screen_height):
+            self.speed_y *= -1
+        super().move(self.speed_x, self.speed_y)
+
+ball = Ball(x, y,speed_x, speed_y, pixel_size, pixel_size, red)  # Create a ball instance
 
 def check_collision_with_cursor(x, y, cursor_pos):  
     """Check if the pixel is within the cursor's area."""  
@@ -54,25 +90,23 @@ def main_game_loop():
             pygame.quit()  
             sys.exit()  
  
-    if check_collision_with_cursor(x, y, cursor_pos):  
-        speed_x *= -1  
-        speed_y *= -1
+    if check_collision_with_cursor(ball.rect.x, ball.rect.y, cursor_pos):  
+        ball.speed_x *= -1  
+        ball.speed_y *= -1
+        player.teleport(cursor_pos[0], cursor_pos[1])  # Teleport the player to the cursor position
 
     # Update pixel position  
-    x += speed_x  
-    y += speed_y  
-  
-    # Bounce the pixel off the edges of the screen  
-    if x <= 0 or x + pixel_size >= screen_width:  
-        speed_x *= -1  
-    if y <= 0 or y + pixel_size >= screen_height:  
-        speed_y *= -1  
-  
+    ball.move(player)  # Move the ball and check for collisions with the player and walls
+    player.teleport(cursor_pos[0], 400)  # Player doesn't move on its own, but we can keep this for future movement logic
+
+    #Draw everything
+
     # Fill the background  
     screen.fill(background_color)  
   
-    # Draw the pixel  
-    screen.fill(white, (x, y, pixel_size, pixel_size))  
+    
+    ball.draw(screen)  # Draw the ball on the screen
+    player.draw(screen)  # Draw the player on the screen   
   
     # Update the display  
     pygame.display.flip()  
