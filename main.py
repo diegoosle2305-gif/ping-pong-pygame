@@ -1,5 +1,7 @@
 import pygame
 import sys  
+import os
+import random
   
 # Initialize Pygame  
 pygame.init()  
@@ -17,21 +19,34 @@ BACKGROUND_COLOR = (0, 0, 0)
 # Set initial position and velocity of the ball
 STARTING_X, STARTING_Y = SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2  
 STARTING_SPEED_X, STARTING_SPEED_Y = 2, 2  
-  
+
 # Define the size of the ball
-pixel_ball_size = 12  
-  
+PIXEL_BALL_SIZE = 12  
+
+#This sould be in 0 for starting the game in the title screen, but for testing purposes it is set to 1
+state_of_game = 0
+
 # Set up the clock for frame rate control  
 clock = pygame.time.Clock()  
 
+def load_image(path):
+    try:
+        image = pygame.image.load(os.path.join(path))
+        return image
+    except Exception as e:
+        print(f"Unable to load image at {path}: {e}")
+        image = pygame.image.load(r"data\images\noTextureImg.png")
+        return image
+
+#Game classes
 class Object:
 
-    def __init__(self, x, y, width, height, color):  
+    def __init__(self, x, y, width, height, image):  
         self.rect = pygame.Rect(x, y, width, height)  
-        self.color = color  
+        self.image = pygame.transform.scale(image, (width, height))  
   
-    def draw(self, surface):  
-        pygame.draw.rect(surface, self.color, self.rect)  
+    def draw(self):  
+        SCREEN.blit(self.image, self.rect)  
   
     def move(self, dx, dy):  
         self.rect.x += dx  
@@ -56,8 +71,8 @@ class Player(Object):
         self.rect.y = y
 
 class Ball(Object):
-    def __init__(self, x, y, speed_x, speed_y, width, height, color):  
-        super().__init__(x, y, width, height, color)  
+    def __init__(self, x, y, speed_x, speed_y, width, height, image):  
+        super().__init__(x, y, width, height, image)  
         self.speed_x = speed_x  
         self.speed_y = speed_y
     
@@ -80,8 +95,8 @@ class Ball(Object):
 
 class Enemie(Object):
 
-    def __init__(self, x, y, width, height, color,speed_x,ball):  
-        super().__init__(x, y, width, height, color)  
+    def __init__(self, x, y, width, height, image,speed_x,ball):  
+        super().__init__(x, y, width, height, image)  
         self.speed_x = speed_x
         self.ball = ball
     
@@ -92,22 +107,30 @@ class Enemie(Object):
         else:
             super().move(-velocity_enemie, 0)
 
-player = Player(300, SCREEN_HEIGHT - 50, 50, 10, GREEN)  # Create a player instanceç
+player = Player(300, SCREEN_HEIGHT - 50, 50, 10, load_image("player.png"))  # Create a player instance
 
-ball = Ball(STARTING_X, STARTING_Y,STARTING_SPEED_X, STARTING_SPEED_Y, pixel_ball_size, pixel_ball_size, RED)  # Create a ball instance
+ball = Ball(STARTING_X, STARTING_Y,STARTING_SPEED_X, STARTING_SPEED_Y, PIXEL_BALL_SIZE, PIXEL_BALL_SIZE, load_image("data/images/ball.png"))  # Create a ball instance
 
-enemie = Enemie(300, 50, 50, 10, WHITE, 10, ball)  # Create an enemy instance
+enemie = Enemie(300, 50, 50, 10, load_image("data/images/enemie.png"), 10, ball)  # Create an enemy instance
 
+def reset_game():
+    global ball, player, enemie
+    player = Player(300, SCREEN_HEIGHT - 50, 50, 10, load_image("data/images/player.png"))  # Reset the player instance
+    ball = Ball(STARTING_X, STARTING_Y,STARTING_SPEED_X, STARTING_SPEED_Y, PIXEL_BALL_SIZE, PIXEL_BALL_SIZE, load_image("data/images/ball.png"))  # Reset the ball instance
+    enemie = Enemie(300, 50, 50, 10, load_image("data/images/enemie.png"), 10, ball)  # Reset the enemy instance
+
+# UI Clases
+class Button(Object):
+    def is_cursor_over(self, cursor_pos):
+        if cursor_pos[0] >= self.rect.x and cursor_pos[0] <= self.rect.x + self.rect.width and cursor_pos[1] >= self.rect.y and cursor_pos[1] <= self.rect.y + self.rect.height:
+            return True
+        return False
+
+button = Button(200, 200, 100, 50, load_image("data/images/titleImg/SettingImg.jpg"))  # Create a button instance
+
+#Game Update Loops
 
 def main_game_loop():
-    cursor_pos = pygame.mouse.get_pos() 
-
-    # Handle events  
-    for event in pygame.event.get():  
-        if event.type == pygame.QUIT:  
-            pygame.quit()  
-            sys.exit()  
-
 
     if ball.is_touching_vertical_walls(SCREEN_WIDTH, SCREEN_HEIGHT):
         print("Game Over")
@@ -123,16 +146,32 @@ def main_game_loop():
     SCREEN.fill(BACKGROUND_COLOR)  
   
     
-    ball.draw(SCREEN)  # Draw the ball on the screen
-    player.draw(SCREEN)  # Draw the player on the screen   
-    enemie.draw(SCREEN)  # Draw the enemy on the screen
-  
+    ball.draw()  # Draw the ball on the screen
+    player.draw()  # Draw the player on the screen   
+    enemie.draw()  # Draw the enemy on the screen
+
+
+
+print("Game started")
+while True:
+    cursor_pos = pygame.mouse.get_pos() 
+    # Handle events     
+    for event in pygame.event.get():  
+        if event.type == pygame.QUIT:  
+            pygame.quit()  
+            sys.exit()  
+    
+    
+    SCREEN.fill(BACKGROUND_COLOR)
+    
+    #Chose what update loop to run based on the state of the game
+    if state_of_game == 0:
+        button.draw()
+    elif state_of_game == 1:
+        #Game update
+        main_game_loop()
+    
     # Update the display  
     pygame.display.flip()  
-  
     # Limit the frame rate  
     clock.tick(60)
-
-
-while True:
-    main_game_loop()
